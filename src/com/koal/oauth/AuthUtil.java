@@ -12,7 +12,7 @@ import com.google.gson.Gson;
  * @author microdsy
  *
  */
-public class OAuthController {
+public class AuthUtil {
 
 	private String TOKEN;
 	private String GETUSRINFO;
@@ -21,7 +21,7 @@ public class OAuthController {
 	/**
 	 * 以类文件的方式初始化Config
 	 */
-	public OAuthController(){
+	public AuthUtil(){
 		config = OauthConfig.getOauthConfig();
 		TOKEN = config.getToken();
 		GETUSRINFO = config.getGetusrinfo();
@@ -31,7 +31,7 @@ public class OAuthController {
 	 * 自定义传入Config的方式
 	 * @param config
 	 */
-	public OAuthController(Config config){
+	public AuthUtil(Config config){
 		this.config = config;
 		TOKEN = this.config.getToken();
 		GETUSRINFO = this.config.getGetusrinfo();
@@ -47,9 +47,13 @@ public class OAuthController {
 		GETUSRINFO = config.getGetusrinfo();
 	}
 	
-	public String getUrl(){
-		return config.getToken();
-	}
+	/**
+	 * 获取url，测试用
+	 * @return
+	 */
+//	public String getUrl(){
+//		return config.getToken();
+//	}
 	
 	
 	/**
@@ -64,7 +68,7 @@ public class OAuthController {
 	 * @param code 获得的授权码
 	 * @return token信息。是一段JSON字符串，ret= &msg= &access_token= &token_type= &refresh_token= &expire_in= &scope= 
 	 */
-	public String getUserInfo(String grant_type, String client_id,String scope,String redirect_uri,String state,String client_secret,String code){
+	public String getToken(String grant_type, String client_id,String scope,String redirect_uri,String state,String client_secret,String code){
 		String token_url = TOKEN;
 		List<BasicNameValuePair> pairs = new ArrayList<BasicNameValuePair>();
 		pairs.add(new BasicNameValuePair("grant_type", grant_type));

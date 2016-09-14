@@ -16,7 +16,7 @@ public class OauthConfig implements Config {
 	}
 	
     private String http = "http://";
-    private String url = "qqq";
+    private String url = "192.168.42.170:8080";
     private String connector = "/";
     private String method = "oauth";
     private String token = "token";
