@@ -1,5 +1,6 @@
 package com.koal.oauth;
 
+
 /**
  * 测试类
  * @author microdsy
@@ -29,10 +30,13 @@ public class Test {
 		
 		
 		AuthUtil oAuthController = new AuthUtil(); //通过该config实例化AuthUtil对象
-		oAuthController.setUrl("192.168.42.170:8080");
+//		oAuthController.setUrl("http://192.168.42.170:8090");
+		oAuthController.setUrl("https://192.168.42.87:1057");
 //		System.out.println(oAuthController.getUrl());
-		String result_token = oAuthController.getToken("authorization_code", "mail", "userapp", "http://127.0.0.1", "126", "987", "ST-19-CrIyQWbsmNZUfYz0Fokm-mail.test.com"); //获取token
+		String result_token = oAuthController.getToken("authorization_code", "297ebb7d57bbbee50157bbfd406e0012", "http://127.0.0.1", "5465321321535", "ST-5-g1DxlCSnW7x6x0sTcstk-sso.ua.com");
 		System.out.println(result_token);
+		
+		
 		
 	} 
 

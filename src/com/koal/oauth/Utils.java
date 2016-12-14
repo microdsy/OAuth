@@ -1,127 +1,126 @@
 package com.koal.oauth;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpVersion;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.AbstractHttpEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.CoreConnectionPNames;
-import org.apache.http.params.CoreProtocolPNames;
-import org.apache.http.params.HttpParams;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 /**
  * 连接访问类
  * @author microdsy
  *
  */
-@SuppressWarnings("deprecation")
 public class Utils {	
 
-	private static ThreadSafeClientConnManager cmm = new ThreadSafeClientConnManager();
-	
-	static {
-	    cmm.setMaxTotal(100);
-	    cmm.setDefaultMaxPerRoute(50);
-	}
-	
-	private final static String CONTENT_TYPE = "application/x-www-form-urlencoded";
 	private final static String ENCODING = "UTF-8";	
+	  /** 
+     * 忽视证书HostName 
+     */  
+    private static HostnameVerifier ignoreHostnameVerifier = new HostnameVerifier() {
+		@Override
+		public boolean verify(String arg0, SSLSession arg1) {
+			return true;
+		}
+	};
 	
-    /**
-     * 以post方式访问该url
-     * @param url url的地址，即？问号前面的东西
-     * @param pairs ？后面跟的参数，以list形式传入
-     * @return 返回读取的结果
-     * @throws Exception
-     */
-    public static String post(String url, List<BasicNameValuePair> pairs) throws Exception {
-        String result = null;
-        HttpPost httppost = new HttpPost(url);
+	  /** 
+     * Ignore Certification 
+     */  
+    private static TrustManager ignoreCertificationTrustManger = new X509TrustManager() {
 
-        HttpEntity entity;
-        UrlEncodedFormEntity initEntity = new UrlEncodedFormEntity(pairs, ENCODING);
+		@Override
+		public void checkClientTrusted(X509Certificate[] arg0, String arg1)
+				throws CertificateException {
+			
+		}
+		@Override
+		public void checkServerTrusted(X509Certificate[] arg0, String arg1)
+				throws CertificateException {
+			
+		}
+		@Override
+		public X509Certificate[] getAcceptedIssuers() {
+			return null;
+		}  
+    };  
+  
+    public static String sendUrlRequest(String urlStr, String content, String requestMethod) throws Exception{
+        HttpsURLConnection.setDefaultHostnameVerifier(ignoreHostnameVerifier); 
 
-        initEntity.setContentType(CONTENT_TYPE);
+    	HttpURLConnection connection = null;
+    	String tempStr = null;
+    	try{
+    		URL url = new URL(urlStr);
+    		
+    		//创建url连接，提交到数据，获取返回结果
+    		//打开连接
+    		connection = (HttpURLConnection)url.openConnection();
+    		//设置提交方式，默认是GET方式
+    		connection.setRequestMethod(requestMethod);
+    		//设置是否向connection输出，因为这个是post请求，参数要放在http正文内，因此需要设置为true
+    		connection.setDoOutput(true);
+    		connection.setDoInput(true);
+    		//POST请求不能使用缓存
+    		connection.setUseCaches(false);
+    		
+    		connection.setRequestProperty("User-Agent", "directclient");
+    		// 配置本次连接的Content-type，配置为application/x-www-form-urlencoded的意思是
+    		// 正文是urlencoded编码过的form参数，下面我们可以看到我们对正文内容使用URLEncoder.encode
+            // 进行编码
+    		connection.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
+    		
+    		
+            if(connection instanceof HttpsURLConnection){
+            	
 
-        httppost.setEntity(initEntity);
-
-        HttpParams params = new BasicHttpParams();
-        params.setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
-        params.setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 3000); // 3000ms
-        HttpClient client = new DefaultHttpClient(cmm, params);
-
-        HttpResponse response = client.execute(httppost);
-
-
-        entity = response.getEntity();
-
-        if (entity != null) {
-            InputStream instream = null;
-            try {
-                instream = entity.getContent();
-                //result = IOUtils.toString(instream);
-                byte[] bytearr = IOUtils.toByteArray(instream);
-                result = new String(bytearr, ENCODING);
-            } catch (IOException ex) {
-                throw ex;
-            } catch (RuntimeException ex) {
-                httppost.abort();
-                throw ex;
-            } finally {
-                instream.close();
+       		 // Prepare SSL Context  
+               TrustManager[] tm = { ignoreCertificationTrustManger };  
+               SSLContext sslContext = SSLContext.getInstance("SSL");  
+               sslContext.init(null, tm, new java.security.SecureRandom());  
+     
+     
+               // 从上述SSLContext对象中得到SSLSocketFactory对象  
+               SSLSocketFactory ssf = sslContext.getSocketFactory();  
+            ((HttpsURLConnection)connection).setSSLSocketFactory(ssf);
             }
-        }
-        return result;
+            
+            
+    		DataOutputStream out = new DataOutputStream(connection.getOutputStream());
+    		out.writeBytes(content);
+    		out.flush();
+    		out.close();
+    		
+    		
+    		StringBuffer bankXmlBuffer = new StringBuffer();
+    		BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream(), ENCODING));
+    		String inputLine;
+    		while((inputLine = in.readLine()) != null){
+    			bankXmlBuffer.append(inputLine);
+    		}
+    		in.close();
+    		
+    		tempStr = bankXmlBuffer.toString();
+    		
+    	} catch(Exception e){
+    		System.out.println("发送请求出现异常！");
+    		e.printStackTrace();
+    	} finally{
+    		if(connection != null){
+    			connection.disconnect();
+    		}
+    	}
+    	return tempStr;
     }
-    
-    /**
-     * 进入对应的url，将获取的字符串返回
-     * @param url
-     * @return
-     * @throws Exception
-     */
-    public static String get(String url) throws Exception {
-        String result = null;
-        HttpGet httpget = new HttpGet(url);
-
-        HttpParams params = new BasicHttpParams();
-        params.setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
-        params.setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 3000); // 3000ms
-        
-        HttpClient client = new DefaultHttpClient(cmm, params);
-        HttpResponse response = client.execute(httpget);
-
-        HttpEntity entity = response.getEntity();
-
-        if (entity != null) {
-            InputStream instream = null;
-            try {
-                instream = entity.getContent();
-                //result = IOUtils.toString(instream);
-                byte[] bytearr = IOUtils.toByteArray(instream);
-                result = new String(bytearr, ENCODING);
-            } catch (IOException ex) {
-                throw ex;
-            } catch (RuntimeException ex) {
-                httpget.abort();
-                throw ex;
-            } finally {
-                instream.close();
-            }
-        }
-        return result;
-    }	
 
 }
